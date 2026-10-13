@@ -71,8 +71,29 @@ h3 { font-size: 1.35rem; }
 .paper-side p { margin: 0 0 12px; }
 .citation { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9rem; white-space: pre-wrap; color: var(--muted); }
 @media (max-width: 760px) {
-  .nav { align-items: flex-start; flex-direction: column; padding: 16px 0; }
-  .hero { padding-top: 70px; }
+  .wrap { width: min(var(--max), calc(100% - 32px)); }
+  .nav {
+    min-height: auto;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 0 14px;
+  }
+  nav { gap: 16px; }
+  nav a { font-size: 0.9rem; }
+  .hero { padding: 52px 0 60px; }
+  .hero h1 {
+    font-size: clamp(2.35rem, 11.5vw, 3.35rem);
+    line-height: 1.08;
+    margin-bottom: 18px;
+  }
+  .hero .eyebrow { margin-bottom: 12px; }
+  .lede { font-size: 1.08rem; line-height: 1.72; }
+  .actions, .links { margin-top: 22px; gap: 12px; }
+  .button { padding: 10px 15px; }
+  .section { padding: 60px 0; }
   .grid, .split, .paper-layout { grid-template-columns: 1fr; }
+  .paper-shell { padding: 58px 0; }
+  .paper-shell .paper-title { font-size: clamp(2.15rem, 10vw, 3rem); }
   .paper-side { position: static; }
 }
