@@ -1,0 +1,75 @@
+name: Sync paper PDFs from Zenodo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sync-papers.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out site
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download canonical PDFs from Zenodo
+        shell: python
+        run: |
+          import json
+          import pathlib
+          import urllib.request
+
+          records = {
+              "23107336": pathlib.Path("publications/aarc/aarc.pdf"),
+              "23119087": pathlib.Path("publications/agentic-execution-assurance/agentic-execution-assurance.pdf"),
+          }
+
+          for record_id, destination in records.items():
+              api = f"https://zenodo.org/api/records/{record_id}"
+              with urllib.request.urlopen(api, timeout=60) as response:
+                  metadata = json.load(response)
+
+              pdfs = [
+                  f for f in metadata.get("files", [])
+                  if str(f.get("key", "")).lower().endswith(".pdf")
+              ]
+              if not pdfs:
+                  raise RuntimeError(f"No PDF found in Zenodo record {record_id}")
+
+              # Prefer the largest PDF, which is the manuscript when a record
+              # also contains small supplementary PDFs.
+              selected = max(pdfs, key=lambda f: int(f.get("size", 0) or 0))
+              links = selected.get("links", {})
+              url = links.get("self") or links.get("content")
+              if not url:
+                  raise RuntimeError(f"No downloadable URL for {selected.get('key')} in {record_id}")
+
+              destination.parent.mkdir(parents=True, exist_ok=True)
+              with urllib.request.urlopen(url, timeout=120) as source, destination.open("wb") as target:
+                  target.write(source.read())
+
+              if destination.read_bytes()[:5] != b"%PDF-":
+                  raise RuntimeError(f"Downloaded file for {record_id} is not a PDF")
+
+              print(f"Synced {selected.get('key')} -> {destination}")
+
+      - name: Commit PDFs if changed
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add publications/aarc/aarc.pdf \
+                  publications/agentic-execution-assurance/agentic-execution-assurance.pdf
+          if git diff --cached --quiet; then
+            echo "Paper PDFs are already current."
+            exit 0
+          fi
+          git commit -m "[paper-sync] Sync canonical Zenodo paper PDFs"
+          git push
